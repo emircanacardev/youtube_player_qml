@@ -10,6 +10,5 @@ function playPause() {
     }
 }
 
-// function playPause2(){
-//     webView.runJavaScript("var video = document.querySelector('video');if (video.paused) { video.play(); } else { video.pause(); }; console.log(document) ")
-// }
+//java script kodlarını ayrı dosyadan çekmeyi çözemedim. çözersem güncellenecek.
+
