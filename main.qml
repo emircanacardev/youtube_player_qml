@@ -8,7 +8,6 @@ ApplicationWindow {
     height: 350
     title: "YouTube Player"
 
-
     WebEngineView {
         id: webView
         visible: true
@@ -61,6 +60,7 @@ ApplicationWindow {
            anchors.bottom: parent.bottom
            width: parent.width
 
+
            model: ListModel {
                id: playlistModel // Burasını API olayını çözdükten sonra güncelliycem.
                ListElement { trackIndex: 0; trackName: "Duman - Kolay Değildir"; trackUrl: "xfpOlwrvpdI"; nowPlaying: true}
@@ -80,7 +80,7 @@ ApplicationWindow {
                     spacing: 10
 
                     Text {
-                       text: trackName
+                       text: title
                        font.pixelSize: 16
                        color: nowPlaying ? "blue" :"black"
                     }
@@ -141,4 +141,5 @@ ApplicationWindow {
             // playPauseButton.text = webView.runJavaScript("playPause()")
         }
     }
+
 }
