@@ -4,9 +4,21 @@
 #include <QDebug>
 
 YouTubeFetcher::YouTubeFetcher(QObject *parent)
-    : QObject(parent) {
+    : QObject(parent)
+{
+    connect(this, &YouTubeFetcher::fetchCompleted, this, [this]()
+    {
+        QVariantList videos = this->getVideoList();
+        qDebug() << "Fetched videos:" << videos;
+        // Burada videoList ile yapılacak işlemleri gerçekleştirebilirsin.
+    });
 }
 
+QVariantList YouTubeFetcher::getVideoList() const
+{
+
+    return videoList;
+}
 
 void YouTubeFetcher::fetchPlaylistVideos(const QString &playlistId, const QString &apiKey) {
     QUrl url("https://www.googleapis.com/youtube/v3/playlistItems");
@@ -14,6 +26,8 @@ void YouTubeFetcher::fetchPlaylistVideos(const QString &playlistId, const QStrin
     query.addQueryItem("part", "snippet");
     query.addQueryItem("playlistId", playlistId);
     query.addQueryItem("key", apiKey);
+    query.addQueryItem("maxResults", "5");
+
     url.setQuery(query);
 
     QNetworkRequest request(url);
@@ -21,9 +35,13 @@ void YouTubeFetcher::fetchPlaylistVideos(const QString &playlistId, const QStrin
     connect(reply, &QNetworkReply::finished, this, &YouTubeFetcher::handleNetworkReply);
 }
 
+
+
 void YouTubeFetcher::handleNetworkReply()
 {
     QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
+
+    videoList.clear();
 
     if (reply->error() == QNetworkReply::NoError)
     {
@@ -33,29 +51,27 @@ void YouTubeFetcher::handleNetworkReply()
         QJsonObject jsonObj = jsonDoc.object();
         QJsonArray itemsArray = jsonObj["items"].toArray();
 
-        m_videoInfoList.clear();
+        for (const QJsonValue& item : itemsArray)
+        {
+            QVariantMap videoData;  // Her bir videonun ayrı ayrı bilgilerini tutmak için bir map yapısı.
 
-        for (const QJsonValue& item : itemsArray) {
             QJsonObject snippet = item.toObject()["snippet"].toObject();
-            QString videoId = snippet["resourceId"].toObject()["videoId"].toString();
-            QString thumbnail = snippet["thumbnails"].toObject()["high"].toObject()["url"].toString();
-            QString title = snippet["title"].toString();
+            videoData["title"] = snippet["title"].toString();
+            videoData["videoId"] = snippet["resourceId"].toObject()["videoId"].toString();
+            videoData["thumbnail"] = snippet["thumbnails"].toObject()["high"].toObject()["url"].toString();
 
-            m_videoInfoList.append({title, videoId, thumbnail});
+            videoList.append(videoData); // Dataları listeye appendledik.
         }
 
+        emit fetchCompleted();
+    }
 
-        for (const VideoInfo& videoInfo : qAsConst(m_videoInfoList)) {
-            qDebug() << "trackName:" << videoInfo.title;
-            qDebug() << "trackUrl:" << videoInfo.videoId;
-            qDebug() << "trackThumbnail:" << videoInfo.thumbnail;
-            qDebug() << "--------------------------";
-        }
-    } else {
-        qWarning() << "API Error:" << reply->errorString();
+
+
+    else
+    {
+        qWarning() << "API Error:" << reply->errorString(); // API düzgün çalışmazsa kontrol için
     }
 
     reply->deleteLater();
 }
-
-

@@ -2,13 +2,15 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtWebEngine 1.10
 
-ApplicationWindow {
+ApplicationWindow
+{
     visible: true
     width: 630
     height: 350
     title: "YouTube Player"
 
-    WebEngineView {
+    WebEngineView
+    {
         id: webView
         visible: true
         anchors.top: parent.top
@@ -19,13 +21,14 @@ ApplicationWindow {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         url: "https://www.youtube.com/watch?v=xfpOlwrvpdI?autoplay=1&playsinline=1"
-        // url: "https://www.youtube.com/embed/ridWIGhsJIM?autoplay=1"
 
-        function setVideoUrl(videoId) {
+        function setVideoUrl(videoId)
+        {
             webView.url = "https://www.youtube.com/watch?v=" + videoId + "?autoplay=1&playsinline=1"
         }
 
-        settings {
+        settings
+        {
             playbackRequiresUserGesture: false
             javascriptCanAccessClipboard: false
             autoLoadImages: false
@@ -40,28 +43,33 @@ ApplicationWindow {
 
     property int currentIndex: 0
 
-    Drawer {
-       id: playlistDrawer
-       width: parent.width/3
-       height: parent.height
-       edge: Qt.LeftEdge
+    Drawer
+    {
+        id: playlistDrawer
+        width: parent.width/3
+        height: parent.height
+        edge: Qt.LeftEdge
 
-       Button {
-           id: closeDrawer
-           anchors.top: parent.top
-           anchors.left: parent.left
-           text: "Close Drawer"
-           onClicked: playlistDrawer.close()
+       Button
+       {
+            id: closeDrawer
+            anchors.top: parent.top
+            anchors.left: parent.left
+            text: "Close Drawer"
+            onClicked: playlistDrawer.close()
        }
 
-       ListView {
-           id: playlistView
-           anchors.top: closeDrawer.bottom
-           anchors.bottom: parent.bottom
-           width: parent.width
 
 
-           model: ListModel {
+       ListView
+       {
+            id: playlistView
+            anchors.top: closeDrawer.bottom
+            anchors.bottom: parent.bottom
+            width: parent.width
+
+           model: ListModel
+           {
                id: playlistModel // Burasını API olayını çözdükten sonra güncelliycem.
                ListElement { trackIndex: 0; trackName: "Duman - Kolay Değildir"; trackUrl: "xfpOlwrvpdI"; nowPlaying: true}
                ListElement { trackIndex: 1; trackName: "Duman - İyi De Banane"; trackUrl: "7Ys30vi4cnI"; nowPlaying: false}
@@ -71,18 +79,20 @@ ApplicationWindow {
            }
 
 
-           delegate: Item {
+           delegate: Item
+           {
                width: parent.width
                height: 60
 
-                Row {
+                Row
+                {
                     anchors.centerIn: parent
                     spacing: 10
 
-                    Text {
-                       text: title
+                    Text
+                    {
+                       text: modelData[0].toString()
                        font.pixelSize: 16
-                       color: nowPlaying ? "blue" :"black"
                     }
                 }
             }
@@ -90,22 +100,27 @@ ApplicationWindow {
     }
 
 
-    Button {
+    Button
+    {
         id: openDrawer
         anchors.top: parent.top
         anchors.left: parent.left
         text: "Open Drawer"
-        onClicked: playlistDrawer.open()
+        onClicked:
+        {
+            playlistDrawer.open()
+        }
     }
 
-    Button {
+    Button
+    {
         id: nextButton
         text: "Next"
         anchors.bottom: parent.bottom
         anchors.left: playPauseButton.right
         enabled: currentIndex < playlistView.model.count - 1
-        onClicked: {
-
+        onClicked:
+        {
             playlistModel.set(currentIndex, {"nowPlaying": false})
             currentIndex++
             playlistModel.set(currentIndex, {"nowPlaying": true})
@@ -114,14 +129,15 @@ ApplicationWindow {
         }
     }
 
-    Button {
+    Button
+    {
         id: previousButton
         text: "Previous"
         anchors.bottom: parent.bottom
         anchors.right: playPauseButton.left
         enabled: currentIndex > 0
-        onClicked: {
-
+        onClicked:
+        {
             playlistModel.set(currentIndex, {"nowPlaying": false})
             currentIndex--
             playlistModel.set(currentIndex, {"nowPlaying": true})
@@ -129,17 +145,18 @@ ApplicationWindow {
         }
     }
 
-    Button {
+    Button
+    {
         id: playPauseButton
         text: "Pause"
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
-        onClicked: {
-            webView.runJavaScript("var video = document.querySelector('video'); if (video.paused) { video.play(); } else { video.pause(); }", function(result) {
+        onClicked:
+        {
+            webView.runJavaScript("var video = document.querySelector('video'); if (video.paused) { video.play(); } else { video.pause(); }", function(result)
+            {
                 playPauseButton.text = result ? "Pause" : "Play";
             });
-            // playPauseButton.text = webView.runJavaScript("playPause()")
         }
     }
-
 }

@@ -7,27 +7,28 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-
-struct VideoInfo {
-    QString title;
-    QString videoId;
-    QString thumbnail;
-};
+#include <QVariantList>
+#include <QVariantMap>
 
 class YouTubeFetcher : public QObject
 {
     Q_OBJECT
-
 public:
     explicit YouTubeFetcher(QObject *parent = nullptr);
+
+    QVariantList getVideoList() const;
+
     void fetchPlaylistVideos(const QString &playlistId, const QString &apiKey);
+
+signals:
+    void fetchCompleted();
 
 private slots:
     void handleNetworkReply();
 
 private:
     QNetworkAccessManager m_networkManager;
-    QList<VideoInfo> m_videoInfoList;
+    QVariantList videoList;
 
 };
 

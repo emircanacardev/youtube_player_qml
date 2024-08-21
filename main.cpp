@@ -3,6 +3,7 @@
 #include <QWebEngineSettings>
 #include <QWebEngineView>
 #include <QtWebEngine>
+#include <QQmlContext>
 #include <youtubefetcher.h>
 
 int main(int argc, char *argv[]) {
@@ -16,9 +17,18 @@ int main(int argc, char *argv[]) {
     QString apiKey = "AIzaSyDyrfjylyfUDODTjeBBp1tuhZ5ptnG5v4E";
 
     YouTubeFetcher youtubeFetcher;
+
     youtubeFetcher.fetchPlaylistVideos(playlistId, apiKey);
+    QObject::connect(&youtubeFetcher, &YouTubeFetcher::fetchCompleted, [&youtubeFetcher]() {
+        qDebug() << "fetchCompleted sinyali alındı!";
+
+        // videoList'i kontrol et
+        QVariantList videos = youtubeFetcher.getVideoList();
+        qDebug() << "Fetched videos:" << videos;
+    });
 
     QQmlApplicationEngine engine;
+
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
 
     if (engine.rootObjects().isEmpty())
