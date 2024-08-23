@@ -5,39 +5,24 @@ import QtWebEngine 1.10
 ApplicationWindow
 {
     visible: true
-    width: 630
-    height: 350
+    width:  630
+    height:  350
     title: "YouTube Player"
 
-    WebEngineView
+    Connections
     {
-        id: webView
-        visible: true
-        anchors.top: parent.top
-        anchors.topMargin: -80 //56(navbar) + 24(padding)
-        anchors.leftMargin: -30
-        anchors.rightMargin: -45
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        url: "https://www.youtube.com/watch?v=xfpOlwrvpdI?autoplay=1&playsinline=1"
-
-        function setVideoUrl(videoId)
+        target: youtubeFetcher
+        function onPlayListDataFetched()
         {
-            webView.url = "https://www.youtube.com/watch?v=" + videoId + "?autoplay=1&playsinline=1"
-        }
+            playlistModel.clear()
 
-        settings
-        {
-            playbackRequiresUserGesture: false
-            javascriptCanAccessClipboard: false
-            autoLoadImages: false
-            // allowRunningInsecureContent: false
-            // javascriptCanOpenWindows: true
-            // webGLEnabled: true
-            // localStorageEnabled: false
-            // fullScreenSupportEnabled: false
-            // javascriptEnabled: true
+            for (var i = 0; i < youtubeFetcher.videoList.length; i++)
+            {
+                var item = youtubeFetcher.videoList[i];
+                playlistModel.append({ title: item.title, videoId: item.videoId, thumbnail: item.thumbnail});
+            }
+            webView.url =  "https://www.youtube.com/watch?v=" + youtubeFetcher.videoList[0].videoId
+            videoThumbnail.source = youtubeFetcher.videoList[0].thumbnail
         }
     }
 
@@ -46,59 +31,117 @@ ApplicationWindow
     Drawer
     {
         id: playlistDrawer
-        width: parent.width/3
+        width: parent.width/2
         height: parent.height
         edge: Qt.LeftEdge
 
-       Button
-       {
+        Rectangle{
             id: closeDrawer
             anchors.top: parent.top
             anchors.left: parent.left
-            text: "Close Drawer"
-            onClicked: playlistDrawer.close()
-       }
+            width: parent.width
+            height: closeDrawerButton.height
+            z: 1
 
+            Button
+            {
+                id: closeDrawerButton
+                anchors.top: parent.top
+                anchors.left: parent.left
+                text: "Close Drawer"
+                onClicked: playlistDrawer.close()
+            }
+        }
 
-
-       ListView
-       {
+        ListView
+        {
             id: playlistView
             anchors.top: closeDrawer.bottom
             anchors.bottom: parent.bottom
             width: parent.width
+            anchors.topMargin: 10
+            spacing: 10
 
-           model: ListModel
-           {
-               id: playlistModel // Burasını API olayını çözdükten sonra güncelliycem.
-               ListElement { trackIndex: 0; trackName: "Duman - Kolay Değildir"; trackUrl: "xfpOlwrvpdI"; nowPlaying: true}
-               ListElement { trackIndex: 1; trackName: "Duman - İyi De Banane"; trackUrl: "7Ys30vi4cnI"; nowPlaying: false}
-               ListElement { trackIndex: 2; trackName: "Duman - Sor Bana"; trackUrl: "yzRIhUjAO28"; nowPlaying: false}
-               ListElement { trackIndex: 3; trackName: "Duman - Öyle Dertli"; trackUrl: "P_hLDSDv0iU"; nowPlaying: false}
-               ListElement { trackIndex: 4; trackName: "Duman - Dibine Kadar"; trackUrl: "4ZPuGxdDf_4"; nowPlaying: false}
-           }
+            model: ListModel
+            {
+                id: playlistModel
+            }
 
 
-           delegate: Item
-           {
-               width: parent.width
-               height: 60
+            delegate: Item
+            {
+                width: playlistView.width
+                height: listButton.height
 
-                Row
+
+                Button
                 {
-                    anchors.centerIn: parent
-                    spacing: 10
-
-                    Text
+                    id: listButton
+                    width: parent.width
+                    font.pixelSize: 16
+                    contentItem: Text
                     {
-                       text: modelData[0].toString()
-                       font.pixelSize: 16
+                        id: textItem
+                        width: parent.width
+                        text: model.title
+                        color: model.index === currentIndex ? "red" : "black"
+                        elide: Text.ElideRight
+                    }
+                    onClicked:
+
+                    {
+                        currentIndex = index
+                        webView.setVideoUrl(model.videoId)
+                        videoThumbnail.source = model.thumbnail
+
                     }
                 }
             }
         }
     }
 
+    WebEngineView
+    {
+        id: webView
+        visible: false
+        // anchors.top: parent.top
+        // anchors.topMargin: -80 //56(navbar) + 24(padding)
+        // anchors.leftMargin: -40
+        // anchors.rightMargin: -45
+        // anchors.left: parent.left
+        // anchors.right: parent.right
+        // anchors.bottom: parent.bottom
+        height: 0
+        width: 0
+
+        function setVideoUrl(videoId)
+        {
+            webView.url = "https://www.youtube.com/watch?v=" + videoId /*+ "?autoplay=1&playsinline=1"*/
+        }
+
+        settings
+        {
+            autoLoadIconsForPage: false
+            autoLoadImages: false
+            javascriptCanOpenWindows: false
+            localContentCanAccessFileUrls: false
+            localStorageEnabled: false
+            printElementBackgrounds: false
+            showScrollBars: false
+            unknownUrlSchemePolicy: WebEngineSettings.DisallowUnknownUrlSchemes
+            webGLEnabled: false
+            playbackRequiresUserGesture: false
+        }
+    }
+
+    Image
+    {
+        id: videoThumbnail
+        width: parent.width
+        height: parent.height
+        anchors.centerIn: parent
+        fillMode: Image.PreserveAspectFit
+    }
 
     Button
     {
@@ -121,11 +164,9 @@ ApplicationWindow
         enabled: currentIndex < playlistView.model.count - 1
         onClicked:
         {
-            playlistModel.set(currentIndex, {"nowPlaying": false})
             currentIndex++
-            playlistModel.set(currentIndex, {"nowPlaying": true})
-            webView.setVideoUrl(playlistModel.get(currentIndex).trackUrl)
-
+            webView.setVideoUrl(playlistModel.get(currentIndex).videoId)
+            videoThumbnail.source = playlistModel.get(currentIndex).thumbnail
         }
     }
 
@@ -138,10 +179,9 @@ ApplicationWindow
         enabled: currentIndex > 0
         onClicked:
         {
-            playlistModel.set(currentIndex, {"nowPlaying": false})
             currentIndex--
-            playlistModel.set(currentIndex, {"nowPlaying": true})
-            webView.setVideoUrl(playlistModel.get(currentIndex).trackUrl)
+            webView.setVideoUrl(playlistModel.get(currentIndex).videoId)
+            videoThumbnail.source = playlistModel.get(currentIndex).thumbnail
         }
     }
 

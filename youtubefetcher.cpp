@@ -1,47 +1,30 @@
 #include "youtubefetcher.h"
-#include <QUrl>
-#include <QUrlQuery>
-#include <QDebug>
+
 
 YouTubeFetcher::YouTubeFetcher(QObject *parent)
     : QObject(parent)
 {
-    connect(this, &YouTubeFetcher::fetchCompleted, this, [this]()
-    {
-        QVariantList videos = this->getVideoList();
-        qDebug() << "Fetched videos:" << videos;
-        // Burada videoList ile yapılacak işlemleri gerçekleştirebilirsin.
-    });
+    connect(&m_networkManager, &QNetworkAccessManager::finished, this, &YouTubeFetcher::handleNetworkReply);
 }
 
-QVariantList YouTubeFetcher::getVideoList() const
+void YouTubeFetcher::fetchPlaylistData(const QString &playlistId, const QString &apiKey) // Finished
 {
-
-    return videoList;
-}
-
-void YouTubeFetcher::fetchPlaylistVideos(const QString &playlistId, const QString &apiKey) {
     QUrl url("https://www.googleapis.com/youtube/v3/playlistItems");
     QUrlQuery query;
     query.addQueryItem("part", "snippet");
     query.addQueryItem("playlistId", playlistId);
     query.addQueryItem("key", apiKey);
-    query.addQueryItem("maxResults", "5");
+    query.addQueryItem("maxResults", "15");
 
     url.setQuery(query);
 
     QNetworkRequest request(url);
-    QNetworkReply *reply = m_networkManager.get(request);
-    connect(reply, &QNetworkReply::finished, this, &YouTubeFetcher::handleNetworkReply);
+    m_networkManager.get(request);
 }
 
-
-
-void YouTubeFetcher::handleNetworkReply()
+void YouTubeFetcher::handleNetworkReply(QNetworkReply *reply)
 {
-    QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
-
-    videoList.clear();
+    m_videoList.clear();
 
     if (reply->error() == QNetworkReply::NoError)
     {
@@ -60,18 +43,21 @@ void YouTubeFetcher::handleNetworkReply()
             videoData["videoId"] = snippet["resourceId"].toObject()["videoId"].toString();
             videoData["thumbnail"] = snippet["thumbnails"].toObject()["high"].toObject()["url"].toString();
 
-            videoList.append(videoData); // Dataları listeye appendledik.
+            m_videoList.append(videoData); // Dataları listeye appendledik.
         }
-
-        emit fetchCompleted();
+        reply->deleteLater();
+        emit playListDataFetched();
     }
-
-
-
     else
     {
         qWarning() << "API Error:" << reply->errorString(); // API düzgün çalışmazsa kontrol için
+        reply->deleteLater();
     }
-
-    reply->deleteLater();
 }
+
+QVariantList YouTubeFetcher::videoList() const
+{
+    return m_videoList;
+}
+
+

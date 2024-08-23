@@ -7,29 +7,31 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-#include <QVariantList>
-#include <QVariantMap>
+#include <QUrl>
+#include <QUrlQuery>
 
 class YouTubeFetcher : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(QVariantList videoList READ videoList NOTIFY videoListChanged FINAL)
+
 public:
     explicit YouTubeFetcher(QObject *parent = nullptr);
 
-    QVariantList getVideoList() const;
+    Q_INVOKABLE void fetchPlaylistData(const QString &playlistId, const QString &apiKey);
 
-    void fetchPlaylistVideos(const QString &playlistId, const QString &apiKey);
+    QVariantList videoList() const;
 
 signals:
-    void fetchCompleted();
+    void playListDataFetched();
+    void videoListChanged();
 
 private slots:
-    void handleNetworkReply();
+    void handleNetworkReply(QNetworkReply *reply);
 
 private:
     QNetworkAccessManager m_networkManager;
-    QVariantList videoList;
-
+    QVariantList m_videoList;
 };
 
 

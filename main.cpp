@@ -1,4 +1,4 @@
-#include <QApplication>
+#include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QWebEngineSettings>
 #include <QWebEngineView>
@@ -10,25 +10,19 @@ int main(int argc, char *argv[]) {
 
     QtWebEngine::initialize();
 
-    QApplication app(argc, argv);
+    QGuiApplication app(argc, argv);
 
-
-    QString playlistId = "PLovRZbEwYy6g_7u3YLtGy2o42OylAlS0M";
-    QString apiKey = "AIzaSyDyrfjylyfUDODTjeBBp1tuhZ5ptnG5v4E";
-
-    YouTubeFetcher youtubeFetcher;
-
-    youtubeFetcher.fetchPlaylistVideos(playlistId, apiKey);
-    QObject::connect(&youtubeFetcher, &YouTubeFetcher::fetchCompleted, [&youtubeFetcher]() {
-        qDebug() << "fetchCompleted sinyali alındı!";
-
-        // videoList'i kontrol et
-        QVariantList videos = youtubeFetcher.getVideoList();
-        qDebug() << "Fetched videos:" << videos;
-    });
 
     QQmlApplicationEngine engine;
 
+    YouTubeFetcher youtubeFetcher;
+
+    QString playlistId = "PL7DA3D097D6FDBC02";
+    QString apiKey = "AIzaSyDyrfjylyfUDODTjeBBp1tuhZ5ptnG5v4E";
+
+    youtubeFetcher.fetchPlaylistData(playlistId, apiKey);
+
+    engine.rootContext()->setContextProperty("youtubeFetcher", &youtubeFetcher);
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
 
     if (engine.rootObjects().isEmpty())
