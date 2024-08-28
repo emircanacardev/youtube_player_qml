@@ -17,10 +17,11 @@ int main(int argc, char *argv[]) {
 
     YouTubeFetcher youtubeFetcher;
 
-    QString playlistId = "PL7DA3D097D6FDBC02";
-    QString apiKey = "AIzaSyDyrfjylyfUDODTjeBBp1tuhZ5ptnG5v4E";
+    // QString playlistId = "PL4BS1o6D9qZL8gODpYZ40D_1_HNQp1Q0a";
+    // QString playlistId = "ADxL1aqCkQ8";
+    // QString apiKey = "AIzaSyDyrfjylyfUDODTjeBBp1tuhZ5ptnG5v4E";
 
-    youtubeFetcher.fetchPlaylistData(playlistId, apiKey);
+    youtubeFetcher.fetchPlaylistData();
 
     engine.rootContext()->setContextProperty("youtubeFetcher", &youtubeFetcher);
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));

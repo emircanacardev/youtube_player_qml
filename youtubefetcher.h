@@ -18,9 +18,11 @@ class YouTubeFetcher : public QObject
 public:
     explicit YouTubeFetcher(QObject *parent = nullptr);
 
-    Q_INVOKABLE void fetchPlaylistData(const QString &playlistId, const QString &apiKey);
+    Q_INVOKABLE void fetchPlaylistData();
 
     QVariantList videoList() const;
+
+    void fetchVideoEmbedInfo(const QString &videoId, QVariantMap &videoData);
 
 signals:
     void playListDataFetched();

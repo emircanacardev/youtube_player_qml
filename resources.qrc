@@ -1,5 +1,12 @@
 <RCC>
     <qresource prefix="/">
         <file>main.qml</file>
+        <file>assets/next.svg</file>
+        <file>assets/pause.svg</file>
+        <file>assets/play.svg</file>
+        <file>assets/previous.svg</file>
+        <file>assets/spinner.svg</file>
+        <file>assets/drawer.svg</file>
+        <file>assets/refresh.svg</file>
     </qresource>
 </RCC>

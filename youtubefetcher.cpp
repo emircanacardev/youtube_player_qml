@@ -7,13 +7,13 @@ YouTubeFetcher::YouTubeFetcher(QObject *parent)
     connect(&m_networkManager, &QNetworkAccessManager::finished, this, &YouTubeFetcher::handleNetworkReply);
 }
 
-void YouTubeFetcher::fetchPlaylistData(const QString &playlistId, const QString &apiKey) // Finished
+void YouTubeFetcher::fetchPlaylistData() // Finished
 {
     QUrl url("https://www.googleapis.com/youtube/v3/playlistItems");
     QUrlQuery query;
     query.addQueryItem("part", "snippet");
-    query.addQueryItem("playlistId", playlistId);
-    query.addQueryItem("key", apiKey);
+    query.addQueryItem("playlistId", "PLxA687tYuMWhkqYjvAGtW_heiEL4Hk_Lx");
+    query.addQueryItem("key", "AIzaSyDyrfjylyfUDODTjeBBp1tuhZ5ptnG5v4E");
     query.addQueryItem("maxResults", "15");
 
     url.setQuery(query);
