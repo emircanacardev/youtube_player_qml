@@ -9,6 +9,8 @@ ApplicationWindow
     height:  420
     title: "YouTube Player"
 
+    onWidthChanged: setShowVideoElements()
+
     property bool isPlaying: false
 
 
@@ -16,35 +18,22 @@ ApplicationWindow
     property string mainColor: "#151515"
     property string secondColor: "#59D5E0"
     property string thirdColor: "#ffffff"
-    property int currentIndex: 0
+    property int currentIndex: -1
     property int counter: 0
+    property int loadingCounter: 0
     property bool isFirstRun: true
     property bool isSetShowVideoElements: false
 
-
-    function loadingProcess()
+    function setVideoUrl(videoId)
     {
-        webView.runJavaScript("document.querySelector('video').duration;", function(duration)
-            {
-
-            if (false) {
-                console.log("DURATION ERROR:" + duration);
-                Qt.callLater(function()
-                {
-                    loadingProcess()
-                })
-                return;
-            }
-
-            console.log("Video element found!");
-
-                slider.updating = true
-                slider.to = duration;
-                timer.running = true
-                isPlaying = true
-
-                console.log(duration)
-            })
+        webView.url = "https://www.youtube.com/watch?v=" + videoId
+        currentVideoText.text = playlistModel.get(currentIndex).title
+        videoThumbnail.source = playlistModel.get(currentIndex).thumbnail
+        // showVideo.checked = false
+        // showVideo.enabled = false
+        isSetShowVideoElements = false
+        busyIndicatorBackground.visible = true
+        playPauseButton.enabled = false
     }
 
     function detectAd()
@@ -54,6 +43,7 @@ ApplicationWindow
             if (result)
             {
                 console.log("Add not detect!");
+                loadingCounter = 0
                 loadingProcess()
             }
             else
@@ -64,6 +54,47 @@ ApplicationWindow
         })
     }
 
+    function loadingProcess()
+    {
+        webView.runJavaScript("document.querySelector('video').duration;", function(duration)
+        {
+            if (typeof duration === 'undefined') {
+                console.log("DURATION ERROR");
+                if  (loadingCounter < 10)
+                {
+                    Qt.callLater(function()
+                    {
+                        loadingCounter ++
+                        loadingProcess()
+                        return
+                    })
+                }
+                else
+                {
+                    cantPlayVideo()
+                    return
+                }
+            }
+
+
+            console.log("Video element found!")
+
+            slider.updating = true
+            slider.to = duration;
+            timer.running = true
+            isPlaying = true
+            playPauseButton.enabled = true
+
+        })
+    }
+
+    function cantPlayVideo()
+    {
+        currentVideoText.text = "Sorry! We cant play this video."
+        playPauseButton.enabled = false
+    }
+
+
     function setShowVideoElements()
     {
         console.log("Video Elements Setting!")
@@ -72,25 +103,18 @@ ApplicationWindow
                 document.querySelector('video').style.position = 'fixed'
                 document.querySelector('video').style.height = '100%'
                 document.querySelector('video').style.width = 'auto'
-                document.querySelector('body > ytd-app').style.visibility = 'hidden'
                 document.querySelector('video').style.visibility = 'visible'
+                document.querySelector('body').style.visibility = 'hidden'
                 ")
 
-        showVideo.enabled = true
+        // showVideo.enabled = true
+
+        busyIndicatorBackground.visible = false
 
         console.log("Video Elements Set!")
 
     }
 
-    function setVideoUrl(videoId)
-    {
-        webView.url = "https://www.youtube.com/watch?v=" + videoId
-        showVideo.checked = false
-        showVideo.enabled = false
-        isSetShowVideoElements = false
-
-
-    }
 
     function nextVideo()
     {
@@ -100,7 +124,6 @@ ApplicationWindow
         {
             setVideoUrl(playlistModel.get(currentIndex).videoId)
         })
-        videoThumbnail.source = playlistModel.get(currentIndex).thumbnail
     }
 
     function previousVideo()
@@ -110,7 +133,6 @@ ApplicationWindow
         {
             setVideoUrl(playlistModel.get(currentIndex).videoId)
         })
-        videoThumbnail.source = playlistModel.get(currentIndex).thumbnail
     }
 
     function playPauseVideo()
@@ -145,8 +167,9 @@ ApplicationWindow
                 playlistModel.append({ title: item.title, videoId: item.videoId, thumbnail: item.thumbnail});
             }
             if (isFirstRun){
-                setVideoUrl(youtubeFetcher.videoList[0].videoId)
-                videoThumbnail.source = youtubeFetcher.videoList[0].thumbnail
+                nextVideo()
+                isFirstRun = false
+                webView.reload()
             }
         }
     }
@@ -283,8 +306,9 @@ ApplicationWindow
             id: playlistView
             anchors.top: drawerButtonArea.bottom
             anchors.bottom: parent.bottom
+            anchors.bottomMargin: 5
             width: parent.width
-            spacing: 10
+            spacing: 5
 
 
             model: ListModel
@@ -297,7 +321,6 @@ ApplicationWindow
             {
                 width: playlistView.width
                 height: listButton.height
-
 
                 Button
                 {
@@ -340,13 +363,13 @@ ApplicationWindow
     {
         id: webView
         anchors.top: parent.top
-        anchors.topMargin: -80 //56(navbar) + 24(padding)
-        anchors.leftMargin: -24
-        anchors.rightMargin: -24
-        // anchors.bottomMargin: -20
+        anchors.topMargin: -50
+        // anchors.leftMargin: -100
+        // anchors.rightMargin: -100
+        anchors.bottomMargin: -50
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottom: slider.top
+        anchors.bottom: bottomBackgroundLine.top
 
         onLoadProgressChanged:
         {
@@ -386,6 +409,24 @@ ApplicationWindow
 
     Rectangle
     {
+        id: busyIndicatorBackground
+        anchors.fill: webView
+        color: mainColor
+
+        BusyIndicator
+        {
+            id: busyIndicator
+            anchors.centerIn: parent
+            running: true
+            visible: true
+            width: 100
+            height: 100
+            palette.dark: secondColor
+        }
+    }
+
+    Rectangle
+    {
         id: videoThumbnailBackground
         anchors.fill: parent
         color: mainColor
@@ -397,9 +438,10 @@ ApplicationWindow
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.bottom: slider.top
+        anchors.bottom: bottomBackgroundLine.top
         fillMode: Image.PreserveAspectFit
     }
+
 
     Button
     {
@@ -431,7 +473,7 @@ ApplicationWindow
         anchors.top: parent.top
         anchors.margins: 5
         anchors.right: parent.right
-        width: 115
+        width: 110
         height: openDrawer.height
         checked: false
 
@@ -495,7 +537,7 @@ ApplicationWindow
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        height: 75
+        height: 105
         color: mainColor
     }
 
@@ -509,16 +551,32 @@ ApplicationWindow
         color: secondColor
     }
 
+    Rectangle
+    {
+        width: currentVideoText.width + 15
+        height: currentVideoText.height + 10
+        anchors.bottom: slider.top
+        anchors.horizontalCenter: parent.horizontalCenter
+        border.color: secondColor
+        radius: 5
+        color: secondColor
+
+        Text {
+            id: currentVideoText
+            anchors.centerIn: parent
+            color: mainColor
+            font.pixelSize: 13
+        }
+    }
 
     Button
     {
         id: playPauseButton
         icon.source: isPlaying ? "assets/pause.svg" : "assets/play.svg"
-        icon.color: enabled ? secondColor : thirdColor
+        icon.color: secondColor
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottomMargin: 5
-        enabled: webView.loadProgress >= 100
 
         background: Rectangle
         {
@@ -543,8 +601,6 @@ ApplicationWindow
         anchors.leftMargin: 5
         anchors.bottomMargin: 5
 
-        enabled: currentIndex < playlistView.model.count - 1
-
         background: Rectangle
         {
             border.color: secondColor
@@ -554,7 +610,15 @@ ApplicationWindow
 
         onClicked:
         {
-            nextVideo()
+            if(currentIndex < playlistView.model.count - 1)
+            {
+                nextVideo()
+            }
+            else
+            {
+                currentIndex = -1
+                nextVideo()
+            }
         }
     }
 
@@ -568,8 +632,6 @@ ApplicationWindow
         anchors.rightMargin: 5
         anchors.bottomMargin: 5
 
-        enabled: currentIndex > 0
-
         background: Rectangle
         {
             border.color: secondColor
@@ -579,7 +641,14 @@ ApplicationWindow
 
         onClicked:
         {
-            previousVideo()
+            if (slider.value < 10 && currentIndex > 0)
+            {
+                previousVideo()
+            }
+            else
+            {
+                slider.value = 0
+            }
         }
     }
 
@@ -688,7 +757,6 @@ ApplicationWindow
 
                 if (counter%10 == 0)
                 {
-                    isFirstRun = false
                     youtubeFetcher.fetchPlaylistData()
                     console.log("Playlist Refreshed!")
                 }
