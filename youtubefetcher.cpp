@@ -4,25 +4,84 @@
 YouTubeFetcher::YouTubeFetcher(QObject *parent)
     : QObject(parent)
 {
-    connect(&m_networkManager, &QNetworkAccessManager::finished, this, &YouTubeFetcher::handleNetworkReply);
+    connect(&m_playlistNetworkManager, &QNetworkAccessManager::finished, this, &YouTubeFetcher::handlePlaylistDataReply);
+    connect(&m_videoNetworkManager, &QNetworkAccessManager::finished, this, &YouTubeFetcher::handleVideoDataReply);
 }
 
-void YouTubeFetcher::fetchPlaylistData() // Finished
+void YouTubeFetcher::fetchPlaylistData(QString playlistUrl) // Finished
+{
+    QUrl qUrl(playlistUrl);
+    QUrlQuery urlQuery(qUrl);
+    QString playlistId = urlQuery.queryItemValue("list");
+
+    setPlaylistId(playlistId);
+
+
+    QUrlQuery playlistQuery;
+    QUrl playlistApiUrl("https://www.googleapis.com/youtube/v3/playlists");
+
+    playlistQuery.addQueryItem("part", "snippet");
+    playlistQuery.addQueryItem("id", playlistId);
+    playlistQuery.addQueryItem("key", apiKey);
+
+    playlistApiUrl.setQuery(playlistQuery);
+
+    QNetworkRequest playlistReply(playlistApiUrl);
+    m_playlistNetworkManager.get(playlistReply);
+}
+
+void YouTubeFetcher::handlePlaylistDataReply(QNetworkReply *playlistReply)
+{
+
+    if (playlistReply->error() == QNetworkReply::NoError)
+    {
+        QVariantMap playlistData;
+
+        QByteArray response = playlistReply->readAll();
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(response);
+        QJsonObject jsonObj = jsonDoc.object();
+        QJsonArray itemsArray = jsonObj["items"].toArray();
+
+        QJsonObject firstItem = itemsArray[0].toObject();
+        QJsonObject snippet = firstItem["snippet"].toObject();
+        playlistData["playlistTitle"] = snippet["title"].toString();
+        playlistData["playlistId"] = firstItem["id"].toString();
+
+        foreach (const QVariant &data, m_playlistIdList)
+        {
+            QVariantMap map = data.toMap();
+            if (map["playlistId"].toString() == playlistData["playlistId"])
+            {
+                return;
+            }
+        }
+
+        m_playlistIdList.append(playlistData);
+        qDebug() << "Playlist Id List: " << m_playlistIdList;
+        emit playlistDataFetched();
+
+    }
+
+    playlistReply->deleteLater();
+}
+
+void YouTubeFetcher::fetchVideoData() // Finished
 {
     QUrl url("https://www.googleapis.com/youtube/v3/playlistItems");
     QUrlQuery query;
     query.addQueryItem("part", "snippet");
-    query.addQueryItem("playlistId", "PLxA687tYuMWhkqYjvAGtW_heiEL4Hk_Lx");
-    query.addQueryItem("key", "AIzaSyDyrfjylyfUDODTjeBBp1tuhZ5ptnG5v4E");
+    query.addQueryItem("playlistId", playlistId());
+    query.addQueryItem("key", apiKey);
     query.addQueryItem("maxResults", "15");
 
     url.setQuery(query);
 
     QNetworkRequest request(url);
-    m_networkManager.get(request);
+    m_videoNetworkManager.get(request);
 }
 
-void YouTubeFetcher::handleNetworkReply(QNetworkReply *reply)
+
+void YouTubeFetcher::handleVideoDataReply(QNetworkReply *reply)
 {
     m_videoList.clear();
 
@@ -42,11 +101,12 @@ void YouTubeFetcher::handleNetworkReply(QNetworkReply *reply)
             videoData["title"] = snippet["title"].toString();
             videoData["videoId"] = snippet["resourceId"].toObject()["videoId"].toString();
             videoData["thumbnail"] = snippet["thumbnails"].toObject()["high"].toObject()["url"].toString();
+            videoData["canPlay"] = true;
 
             m_videoList.append(videoData); // Dataları listeye appendledik.
         }
         reply->deleteLater();
-        emit playListDataFetched();
+        emit videoDataFetched();
     }
     else
     {
@@ -61,3 +121,21 @@ QVariantList YouTubeFetcher::videoList() const
 }
 
 
+
+QString YouTubeFetcher::playlistId() const
+{
+    return m_playlistId;
+}
+
+void YouTubeFetcher::setPlaylistId(const QString &newPlaylistId)
+{
+    if (m_playlistId == newPlaylistId)
+        return;
+    m_playlistId = newPlaylistId;
+    emit playlistIdChanged();
+}
+
+QVariantList YouTubeFetcher::playlistIdList() const
+{
+    return m_playlistIdList;
+}

@@ -29,3 +29,5 @@ RESOURCES += \
     resources.qrc
 
 QMAKE_PROJECT_DEPTH = 0
+
+DISTFILES +=
