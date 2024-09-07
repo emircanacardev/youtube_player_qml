@@ -61,5 +61,4 @@ private:
     QVariantList m_playlistIdList;
 };
 
-
 #endif // YOUTUBEFETCHER_H

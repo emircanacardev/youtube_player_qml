@@ -15,8 +15,9 @@ ApplicationWindow
     property string thirdColor: "#ffffff"
     property int currentVideoIndex: -1
     property bool currentAction: true
+    property int adDetectCounter: 0
     property int counter: 0
-    property int loadingCounter: 0
+    property int loadingErrorCounter: 0
     property int reloadCounter: 0
     property bool isFirstRun: true
 
@@ -33,7 +34,6 @@ ApplicationWindow
     {
         webView.runJavaScript("document.querySelector('video');", function(result)
         {
-            console.log(result)
             reloadTimer.running = false
 
             if (result)
@@ -45,16 +45,23 @@ ApplicationWindow
                     if (result)
                     {
                         console.log("Add not detect!");
-                        loadingCounter = 0
                         loadingProcess()
                     }
                     else
                     {
                         console.log("Add detected!");
-                        webView.reload()
+                        adDetectCounter++
+                        if (adDetectCounter >= 5)
+                        {
+                            isFirstRun = true
+                            youtubeFetcher.fetchVideoData()
+                        }
+                        else
+                        {
+                            webView.reload()
+                        }
                     }
                 })
-
             }
             else
             {
@@ -67,12 +74,10 @@ ApplicationWindow
     {
         console.log("Somethings went wrong! Reloading...")
 
-
-
         if (reloadCounter > 3)
         {
             console.log("Playlist refreshed!")
-            currentVideoIndex = 0
+            currentVideoIndex = -1
             reloadCounter = 0
             isFirstRun = true
             youtubeFetcher.fetchVideoData();
@@ -93,13 +98,14 @@ ApplicationWindow
 
         webView.runJavaScript("document.querySelector('video').duration;", function(duration)
         {
-            if (typeof duration === 'undefined') {
-                console.log("DURATION ERROR");
-                if  (loadingCounter < 50)
+            if (typeof duration === 'undefined')
+            {
+                console.log("DURATION ERROR")
+                if  (loadingErrorCounter < 50)
                 {
                     Qt.callLater(function()
                     {
-                        loadingCounter ++
+                        loadingErrorCounter ++
                         loadingProcess()
                         return
                     })
@@ -120,13 +126,12 @@ ApplicationWindow
                 setVideoElementStyles()
             }
         })
-
     }
 
     function cantPlayVideo()
     {
-        console.log("------------------------"+ videoModel.get(currentVideoIndex).canPlay + "---------------")
-        currentVideoText.text = "Sorry! We cant play this video."
+        loadingErrorCounter = 0
+
         if (videoModel.get(currentVideoIndex).canPlay === true)
         {
             videoModel.get(currentVideoIndex).canPlay = false
@@ -143,7 +148,6 @@ ApplicationWindow
         }
     }
 
-
     function setVideoElementStyles()
     {
         console.log("Video Elements Setting!")
@@ -159,12 +163,11 @@ ApplicationWindow
                 ")
 
         console.log("Video Elements Set!")
-
     }
-
 
     function nextVideo()
     {
+        webView.stop()
         sliderTimer.running = false
         currentAction = true // true for next
 
@@ -192,6 +195,7 @@ ApplicationWindow
 
     function previousVideo()
     {
+        webView.stop()
         sliderTimer.running = false
         currentAction = false // false for previous
 
@@ -223,10 +227,8 @@ ApplicationWindow
         {
             if (result)
             {
-
                 isPlaying = true
                 sliderTimer.running = true
-
             }
             else
             {
@@ -300,7 +302,8 @@ ApplicationWindow
             playlistIdListDrawer.close()
         }
 
-        Rectangle{
+        Rectangle
+        {
             id: drawerButtonArea
             anchors.top: parent.top
             anchors.left: parent.left
@@ -353,7 +356,8 @@ ApplicationWindow
                     radius: 5
                     border.color: secondColor
 
-                    Text {
+                    Text
+                    {
                         anchors.centerIn: parent
                         text: "✔"
                         font.pixelSize: 15
@@ -361,15 +365,14 @@ ApplicationWindow
                         visible: autoRefresh.checked
                     }
 
-                    Text {
+                    Text
+                    {
                         text: "Auto Refresh"
-                        color: secondColor
-                        font.pixelSize: 13
-
                         anchors.left: autoRefreshIndicator.right
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.leftMargin: 5
-
+                        color: secondColor
+                        font.pixelSize: 13
                     }
                 }
 
@@ -406,7 +409,7 @@ ApplicationWindow
                 {
                     console.log("Playlist refreshed!")
                     isFirstRun = false
-                    youtubeFetcher.fetchVideoData();
+                    youtubeFetcher.fetchVideoData()
                 }
             }
 
@@ -418,7 +421,8 @@ ApplicationWindow
                 width: playlistInput.width
                 height: 150
 
-                background: Rectangle {
+                background: Rectangle
+                {
                     anchors.fill: parent
                     border.color: secondColor
                     radius: 10
@@ -433,7 +437,6 @@ ApplicationWindow
                     width: parent.width
                     spacing: 5
                     clip: true
-
 
                     model: ListModel
                     {
@@ -462,12 +465,14 @@ ApplicationWindow
 
                             onClicked:
                             {
-                                console.log("Playlist refreshed!")
-                                isFirstRun = true
-                                currentVideoIndex = -1
-                                currentPlaylistText.text = model.playlistTitle
-                                youtubeFetcher.setPlaylistId(model.playlistId)
-                                youtubeFetcher.fetchVideoData()
+                                if (currentPlaylistText.text !== model.playlistTitle) {
+                                    console.log("Playlist refreshed!")
+                                    isFirstRun = true
+                                    currentVideoIndex = -1
+                                    currentPlaylistText.text = model.playlistTitle
+                                    youtubeFetcher.setPlaylistId(model.playlistId)
+                                    youtubeFetcher.fetchVideoData()
+                                }
                             }
 
                             background: Rectangle
@@ -483,7 +488,8 @@ ApplicationWindow
                 }
             }
 
-            TextField {
+            TextField
+            {
                 id: playlistInput
                 placeholderText: "Enter Playlist URL"
                 anchors.left: playlistIdListOpenButton.right
@@ -521,6 +527,7 @@ ApplicationWindow
                     {
                         if(playlistInput.text !== "")
                         {
+                            webView.stop()
                             console.log("Playlist refreshed!")
                             isFirstRun = true
                             currentVideoIndex = -1
@@ -560,21 +567,27 @@ ApplicationWindow
         Rectangle
         {
             id: currentPlaylistTextBackground
-            width: currentPlaylistText.width + 25
-            height: currentPlaylistText.height + 20
+            width: parent.width
+            height: 50
             anchors.top: drawerButtonArea.bottom
             anchors.left: parent.left
-            anchors.leftMargin: 5
+            anchors.right: parent.right
+            anchors.margins: 5
             color: secondColor
             border.color: mainColor
             border.width: 5
             radius: 10
 
-            Text {
+            Text
+            {
                 id: currentPlaylistText
-                anchors.centerIn: parent
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 10
                 color: mainColor
-                font.pixelSize: 15
+                elide: Text.ElideRight
+                anchors.verticalCenter: parent.verticalCenter
+                font.pixelSize: 20
             }
         }
 
@@ -584,12 +597,10 @@ ApplicationWindow
             anchors.top: currentPlaylistTextBackground.bottom
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 5
-            anchors.topMargin: 5
+            anchors.topMargin: 10
             width: parent.width
             spacing: 5
             clip: true
-
-
 
             model: ListModel
             {
@@ -618,10 +629,10 @@ ApplicationWindow
 
                     onClicked:
                     {
+                        webView.stop()
                         currentVideoIndex = index
                         setVideoUrl(model.videoId)
                         videoThumbnail.source = model.thumbnail
-
                     }
 
                     background: Rectangle
@@ -637,22 +648,17 @@ ApplicationWindow
         }
     }
 
-
     WebEngineView
     {
         id: webView
         anchors.top: parent.top
-        anchors.topMargin: -50
-        // anchors.leftMargin: -100
-        // anchors.rightMargin: -100
-        anchors.bottomMargin: -50
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: bottomBackgroundLine.top
 
         onLoadProgressChanged:
         {
-            console.log(loadProgress)
+            console.log(loadProgress + "%")
             if (loadProgress === 100)
             {
                 detectAd()
@@ -725,13 +731,11 @@ ApplicationWindow
     Button
     {
         id: openDrawer
-
         icon.source: "assets/drawer.svg"
         icon.color: secondColor
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.margins: 5
-
 
         onClicked:
         {
@@ -775,7 +779,8 @@ ApplicationWindow
             radius: 5
             border.color: secondColor
 
-            Text {
+            Text
+            {
                 anchors.centerIn: parent
                 text: "✔"
                 font.pixelSize: 15
@@ -783,7 +788,8 @@ ApplicationWindow
                 visible: showVideo.checked
             }
 
-            Text {
+            Text
+            {
                 id: showVideoText
                 text: "Show Video"
                 font.pixelSize: 13
@@ -792,7 +798,6 @@ ApplicationWindow
                 anchors.left: showVideoIndicator.right
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.leftMargin: 5
-
             }
         }
 
@@ -841,7 +846,8 @@ ApplicationWindow
         radius: 5
         color: secondColor
 
-        Text {
+        Text
+        {
             id: currentVideoText
             anchors.centerIn: parent
             color: mainColor
@@ -927,7 +933,8 @@ ApplicationWindow
         }
     }
 
-    Slider {
+    Slider
+    {
         id: slider
         value: 0
         from: 0
@@ -941,10 +948,9 @@ ApplicationWindow
         {
             if (slider.updating)
             {
-                webView.runJavaScript("document.querySelector('video').currentTime = " + value + ";");
+                webView.runJavaScript("document.querySelector('video').currentTime = " + value + ";")
             }
         }
-
 
         background: Rectangle
         {
@@ -969,7 +975,7 @@ ApplicationWindow
 
         handle: Rectangle
         {
-            x: sliderLeftArea.width
+            x: sliderLeftArea.width - 5
             y: slider.topPadding + slider.availableHeight / 2 - height / 2
             implicitWidth: 20
             implicitHeight: 20
@@ -987,19 +993,21 @@ ApplicationWindow
         anchors.top: slider.top
         anchors.bottom: slider.bottom
         anchors.right: slider.left
+        anchors.rightMargin: 5
         border.color: secondColor
         radius: 5
         color: secondColor
 
-        Text {
+        Text
+        {
             id: currentVideoTime
             anchors.centerIn: parent
             text:
             {
-                var minutes = Math.floor(slider.value);
-                var hours = Math.floor(minutes / 60);
-                var remainingMinutes = minutes % 60;
-                return hours + ":" + (remainingMinutes < 10 ? "0" : "") + remainingMinutes;
+                var minutes = Math.floor(slider.value)
+                var hours = Math.floor(minutes / 60)
+                var remainingMinutes = minutes % 60
+                return hours + ":" + (remainingMinutes < 10 ? "0" : "") + remainingMinutes
             }
             color: mainColor
             font.pixelSize: 13
@@ -1013,19 +1021,21 @@ ApplicationWindow
         anchors.top: slider.top
         anchors.bottom: slider.bottom
         anchors.left: slider.right
+        anchors.leftMargin: 5
         border.color: secondColor
         radius: 5
         color: secondColor
 
-        Text {
+        Text
+        {
             id: totalVideoTime
             anchors.centerIn: parent
             text:
             {
-                var minutes = Math.floor(slider.to);
-                var hours = Math.floor(minutes / 60);
-                var remainingMinutes = minutes % 60;
-                return hours + ":" + (remainingMinutes < 10 ? "0" : "") + remainingMinutes;
+                var minutes = Math.floor(slider.to)
+                var hours = Math.floor(minutes / 60)
+                var remainingMinutes = minutes % 60
+                return hours + ":" + (remainingMinutes < 10 ? "0" : "") + remainingMinutes
             }
             color: mainColor
             font.pixelSize: 13
@@ -1047,8 +1057,6 @@ ApplicationWindow
                 youtubeFetcher.fetchVideoData()
                 console.log("Playlist Refreshed!")
             }
-
-
         }
     }
 
@@ -1080,9 +1088,7 @@ ApplicationWindow
             {
                 busyIndicatorBackground.visible = false
             }
-
-
-       }
+        }
     }
 
     Timer
@@ -1106,7 +1112,6 @@ ApplicationWindow
         running: true
         onTriggered:
         {
-
             if (slider.value === slider.to)
             {
                 if (currentVideoIndex < playlistView.model.count - 1)
@@ -1125,29 +1130,4 @@ ApplicationWindow
             }
         }
     }
-
-    // Dialog {
-    //     id: warningDialog
-    //     modal: true
-
-    //     Text {
-    //         text: "Sorry! We can not open this video. Next video opening!"
-    //         font.pixelSize: 18
-    //         anchors.centerIn: parent
-    //     }
-    // }
-
-    // Button
-    // {
-    //     anchors.centerIn: parent
-    //     width: 50
-    //     height: 50
-    //     visible: true
-
-
-    //     onClicked:
-    //     {
-    //         warningDialog.open()
-    //     }
-    // }
 }

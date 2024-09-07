@@ -16,7 +16,6 @@ void YouTubeFetcher::fetchPlaylistData(QString playlistUrl) // Finished
 
     setPlaylistId(playlistId);
 
-
     QUrlQuery playlistQuery;
     QUrl playlistApiUrl("https://www.googleapis.com/youtube/v3/playlists");
 
@@ -57,9 +56,7 @@ void YouTubeFetcher::handlePlaylistDataReply(QNetworkReply *playlistReply)
         }
 
         m_playlistIdList.append(playlistData);
-        qDebug() << "Playlist Id List: " << m_playlistIdList;
         emit playlistDataFetched();
-
     }
 
     playlistReply->deleteLater();
@@ -72,7 +69,7 @@ void YouTubeFetcher::fetchVideoData() // Finished
     query.addQueryItem("part", "snippet");
     query.addQueryItem("playlistId", playlistId());
     query.addQueryItem("key", apiKey);
-    query.addQueryItem("maxResults", "15");
+    query.addQueryItem("maxResults", "50");
 
     url.setQuery(query);
 
@@ -80,14 +77,12 @@ void YouTubeFetcher::fetchVideoData() // Finished
     m_videoNetworkManager.get(request);
 }
 
-
 void YouTubeFetcher::handleVideoDataReply(QNetworkReply *reply)
 {
     m_videoList.clear();
 
     if (reply->error() == QNetworkReply::NoError)
     {
-
         QByteArray response = reply->readAll();
         QJsonDocument jsonDoc = QJsonDocument::fromJson(response);
         QJsonObject jsonObj = jsonDoc.object();
@@ -120,8 +115,6 @@ QVariantList YouTubeFetcher::videoList() const
     return m_videoList;
 }
 
-
-
 QString YouTubeFetcher::playlistId() const
 {
     return m_playlistId;
@@ -130,7 +123,9 @@ QString YouTubeFetcher::playlistId() const
 void YouTubeFetcher::setPlaylistId(const QString &newPlaylistId)
 {
     if (m_playlistId == newPlaylistId)
+    {
         return;
+    }
     m_playlistId = newPlaylistId;
     emit playlistIdChanged();
 }
